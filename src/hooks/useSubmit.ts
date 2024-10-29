@@ -92,7 +92,6 @@ const useSubmit = () => {
         );
       } else if (apiKey) {
         // own apikey
-        chats[currentChatIndex].config.model = "llama3.1:405b"
         stream = await getChatCompletionStream(
           useStore.getState().apiEndpoint,
           messages,
