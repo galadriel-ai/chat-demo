@@ -59,6 +59,9 @@ export type ModelOptions =
   | 'gpt-4-turbo'
   | 'gpt-4-turbo-2024-04-09'
   | 'gpt-3.5-turbo'
+  | 'llama3.1:405b'
+  | 'llama3.1:70b'
+  | 'llama3.1'
   | 'gpt-3.5-turbo-16k'
   | 'gpt-3.5-turbo-1106'
   | 'gpt-3.5-turbo-0125';
