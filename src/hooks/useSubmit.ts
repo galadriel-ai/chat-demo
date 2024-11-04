@@ -5,7 +5,7 @@ import { ChatInterface, MessageInterface } from '@type/chat';
 import { getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
 import { limitMessageTokens, updateTotalTokenUsed } from '@utils/messageUtils';
-import { _defaultChatConfig } from '@constants/chat';
+import { _defaultChatConfig, modelCost } from '@constants/chat';
 import { officialAPIEndpoint } from '@constants/auth';
 
 const useSubmit = () => {
@@ -20,7 +20,7 @@ const useSubmit = () => {
   const setChats = useStore((state) => state.setChats);
 
   const generateTitle = async (
-    message: MessageInterface[]
+    message: MessageInterface[],
   ): Promise<string> => {
     let data;
     try {
@@ -34,7 +34,7 @@ const useSubmit = () => {
         data = await getChatCompletion(
           useStore.getState().apiEndpoint,
           message,
-          _defaultChatConfig
+          _defaultChatConfig,
         );
       } else if (apiKey) {
         // own apikey
@@ -42,7 +42,7 @@ const useSubmit = () => {
           useStore.getState().apiEndpoint,
           message,
           _defaultChatConfig,
-          apiKey
+          apiKey,
         );
       }
     } catch (error: unknown) {
@@ -73,10 +73,15 @@ const useSubmit = () => {
       const messages = limitMessageTokens(
         chats[currentChatIndex].messages,
         chats[currentChatIndex].config.max_tokens,
-        chats[currentChatIndex].config.model
+        chats[currentChatIndex].config.model,
       );
       if (messages.length === 0) throw new Error('Message exceed max token!');
 
+      const startTime = new Date();
+      let ttftMs: number | null = null;
+      let promptTokens: number | null = null;
+      let completionTokens: number | null = null;
+      let tokensPerSec: number | null = null;
       // no api key (free)
       if (!apiKey || apiKey.length === 0) {
         // official endpoint
@@ -88,7 +93,7 @@ const useSubmit = () => {
         stream = await getChatCompletionStream(
           useStore.getState().apiEndpoint,
           messages,
-          chats[currentChatIndex].config
+          chats[currentChatIndex].config,
         );
       } else if (apiKey) {
         // own apikey
@@ -96,14 +101,14 @@ const useSubmit = () => {
           useStore.getState().apiEndpoint,
           messages,
           chats[currentChatIndex].config,
-          apiKey
+          apiKey,
         );
       }
 
       if (stream) {
         if (stream.locked)
           throw new Error(
-            'Oops, the stream is locked right now. Please try again'
+            'Oops, the stream is locked right now. Please try again',
           );
         const reader = stream.getReader();
         let reading = true;
@@ -111,7 +116,7 @@ const useSubmit = () => {
         while (reading && useStore.getState().generating) {
           const { done, value } = await reader.read();
           const result = parseEventSource(
-            partial + new TextDecoder().decode(value)
+            partial + new TextDecoder().decode(value),
           );
           partial = '';
 
@@ -119,20 +124,49 @@ const useSubmit = () => {
             reading = false;
           } else {
             const resultString = result.reduce((output: string, curr) => {
+              // TODO: latency, ttft, tokens per req, cost per message
               if (typeof curr === 'string') {
                 partial += curr;
               } else {
                 const content = curr.choices[0]?.delta?.content ?? null;
                 if (content) output += content;
+                else {
+                  console.log(curr);
+                  promptTokens = curr.usage?.prompt_tokens ?? null;
+                  completionTokens = curr.usage?.completion_tokens ?? null;
+                }
+              }
+              if (ttftMs === null) {
+                ttftMs = (new Date()).getTime() - startTime.getTime();
               }
               return output;
             }, '');
 
             const updatedChats: ChatInterface[] = JSON.parse(
-              JSON.stringify(useStore.getState().chats)
+              JSON.stringify(useStore.getState().chats),
             );
             const updatedMessages = updatedChats[currentChatIndex].messages;
             updatedMessages[updatedMessages.length - 1].content += resultString;
+            // Metrics
+            if (ttftMs !== null) updatedMessages[updatedMessages.length - 1].ttftMs = ttftMs;
+            if (promptTokens) updatedMessages[updatedMessages.length - 1].promptTokens = promptTokens;
+            if (completionTokens) {
+              updatedMessages[updatedMessages.length - 1].completionTokens = completionTokens;
+              tokensPerSec = completionTokens / (((new Date()).getTime() - startTime.getTime()) / 1000);
+              updatedMessages[updatedMessages.length - 1].tokensPerSec = tokensPerSec;
+            }
+            if (promptTokens && completionTokens) {
+              const model = updatedChats[currentChatIndex].config.model;
+              const totalTokens = updateTotalTokenUsed(
+                model,
+                promptTokens,
+                completionTokens,
+              );
+              updatedMessages[updatedMessages.length - 1].totalTokens = totalTokens;
+
+              const { prompt, completion } = modelCost[model as keyof typeof modelCost];
+              updatedMessages[updatedMessages.length - 1].price = totalTokens * (prompt.price / prompt.unit);
+            }
             setChats(updatedChats);
           }
         }
@@ -147,15 +181,17 @@ const useSubmit = () => {
 
       // update tokens used in chatting
       const currChats = useStore.getState().chats;
-      const countTotalTokens = useStore.getState().countTotalTokens;
+      // const countTotalTokens = useStore.getState().countTotalTokens;
+      // const countTotalTokens = useStore.getState().countTotalTokens;
+      const countTotalTokens = true;
 
-      if (currChats && countTotalTokens) {
+      if (currChats && countTotalTokens && promptTokens && completionTokens) {
         const model = currChats[currentChatIndex].config.model;
         const messages = currChats[currentChatIndex].messages;
-        updateTotalTokenUsed(
+        const totalTokens = updateTotalTokenUsed(
           model,
-          messages.slice(0, -1),
-          messages[messages.length - 1]
+          promptTokens,
+          completionTokens,
         );
       }
 
@@ -171,30 +207,30 @@ const useSubmit = () => {
         const user_message =
           currChats[currentChatIndex].messages[messages_length - 2].content;
 
-        const message: MessageInterface = {
-          role: 'user',
-          content: `Generate a title in less than 6 words for the following message (language: ${i18n.language}):\n"""\nUser: ${user_message}\nAssistant: ${assistant_message}\n"""`,
-        };
+        // const message: MessageInterface = {
+        //   role: 'user',
+        //   content: `Generate a title in less than 6 words for the following message (language: ${i18n.language}):\n"""\nUser: ${user_message}\nAssistant: ${assistant_message}\n"""`,
+        // };
 
-        let title = (await generateTitle([message])).trim();
-        if (title.startsWith('"') && title.endsWith('"')) {
-          title = title.slice(1, -1);
-        }
-        const updatedChats: ChatInterface[] = JSON.parse(
-          JSON.stringify(useStore.getState().chats)
-        );
-        updatedChats[currentChatIndex].title = title;
-        updatedChats[currentChatIndex].titleSet = true;
-        setChats(updatedChats);
-
-        // update tokens used for generating title
-        if (countTotalTokens) {
-          const model = _defaultChatConfig.model;
-          updateTotalTokenUsed(model, [message], {
-            role: 'assistant',
-            content: title,
-          });
-        }
+        // let title = (await generateTitle([message])).trim();
+        // if (title.startsWith('"') && title.endsWith('"')) {
+        //   title = title.slice(1, -1);
+        // }
+        // const updatedChats: ChatInterface[] = JSON.parse(
+        //   JSON.stringify(useStore.getState().chats),
+        // );
+        // updatedChats[currentChatIndex].title = title;
+        // updatedChats[currentChatIndex].titleSet = true;
+        // setChats(updatedChats);
+        //
+        // // update tokens used for generating title
+        // if (countTotalTokens) {
+        //   const model = _defaultChatConfig.model;
+        //   updateTotalTokenUsed(model, [message], {
+        //     role: 'assistant',
+        //     content: title,
+        //   });
+        // }
       }
     } catch (e: unknown) {
       const err = (e as Error).message;

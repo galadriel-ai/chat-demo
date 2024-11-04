@@ -23,7 +23,7 @@ export const modelOptions: ModelOptions[] = [
   'llama3.1:405b',
 ];
 
-export const defaultModel = 'llama3.1:8b';
+export const defaultModel = 'llama3.1:70b';
 
 export const modelMaxToken = {
   'llama3.1:8b': 8192,
@@ -33,16 +33,16 @@ export const modelMaxToken = {
 
 export const modelCost = {
   'llama3.1:8b': {
-    prompt: { price: 0.0015, unit: 1000 },
-    completion: { price: 0.002, unit: 1000 },
+    prompt: { price: 0.00008, unit: 1000 },
+    completion: { price: 0.00008, unit: 1000 },
   },
   'llama3.1:70b': {
-    prompt: { price: 0.0015, unit: 1000 },
-    completion: { price: 0.002, unit: 1000 },
+    prompt: { price: 0.00079, unit: 1000 },
+    completion: { price: 0.00079, unit: 1000 },
   },
   'llama3.1:405b': {
-    prompt: { price: 0.0015, unit: 1000 },
-    completion: { price: 0.002, unit: 1000 },
+    prompt: { price: 0.0035, unit: 1000 },
+    completion: { price: 0.0035, unit: 1000 },
   },
 };
 

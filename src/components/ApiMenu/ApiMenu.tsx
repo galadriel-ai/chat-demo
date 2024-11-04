@@ -99,7 +99,7 @@ const ApiMenu = ({
               ns='api'
               components={[
                 <a
-                  href='https://platform.openai.com/account/api-keys'
+                  href='https://dashboard.galadriel.com/dashboard/api_keys'
                   className='link'
                   target='_blank'
                 />,

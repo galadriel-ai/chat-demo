@@ -7,6 +7,12 @@ export const roles: Role[] = ['user', 'assistant', 'system'];
 export interface MessageInterface {
   role: Role;
   content: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  ttftMs?: number;
+  tokensPerSec?: number;
+  totalTokens?: number;
+  price?: number;
 }
 
 export interface ChatInterface {
