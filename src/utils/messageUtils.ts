@@ -3,6 +3,7 @@ import { MessageInterface, ModelOptions, TotalTokenUsed } from '@type/chat';
 import useStore from '@store/store';
 
 import { Tiktoken } from '@dqbd/tiktoken/lite';
+
 const cl100k_base = await import('@dqbd/tiktoken/encoders/cl100k_base.json');
 
 const encoder = new Tiktoken(
@@ -13,13 +14,13 @@ const encoder = new Tiktoken(
     '<|im_end|>': 100265,
     '<|im_sep|>': 100266,
   },
-  cl100k_base.pat_str
+  cl100k_base.pat_str,
 );
 
 // https://github.com/dqbd/tiktoken/issues/23#issuecomment-1483317174
 export const getChatGPTEncoding = (
   messages: MessageInterface[],
-  model: ModelOptions
+  model: ModelOptions,
 ) => {
   const isGpt3 = false;
 
@@ -46,7 +47,7 @@ const countTokens = (messages: MessageInterface[], model: ModelOptions) => {
 export const limitMessageTokens = (
   messages: MessageInterface[],
   limit: number = 4096,
-  model: ModelOptions
+  model: ModelOptions,
 ): MessageInterface[] => {
   const limitedMessages: MessageInterface[] = [];
   let tokenCount = 0;
@@ -89,24 +90,25 @@ export const limitMessageTokens = (
 
 export const updateTotalTokenUsed = (
   model: ModelOptions,
-  promptMessages: MessageInterface[],
-  completionMessage: MessageInterface
-) => {
+  newPromptTokens: number,
+  newCompletionTokens: number,
+): number => {
   const setTotalTokenUsed = useStore.getState().setTotalTokenUsed;
   const updatedTotalTokenUsed: TotalTokenUsed = JSON.parse(
-    JSON.stringify(useStore.getState().totalTokenUsed)
+    JSON.stringify(useStore.getState().totalTokenUsed),
   );
 
-  const newPromptTokens = countTokens(promptMessages, model);
-  const newCompletionTokens = countTokens([completionMessage], model);
   const { promptTokens = 0, completionTokens = 0 } =
-    updatedTotalTokenUsed[model] ?? {};
+  updatedTotalTokenUsed[model] ?? {};
 
+  const totalPromptTokens = promptTokens + newPromptTokens;
+  const totalCompletionTokens = completionTokens + newCompletionTokens;
   updatedTotalTokenUsed[model] = {
-    promptTokens: promptTokens + newPromptTokens,
-    completionTokens: completionTokens + newCompletionTokens,
+    promptTokens: totalPromptTokens,
+    completionTokens: totalCompletionTokens,
   };
   setTotalTokenUsed(updatedTotalTokenUsed);
+  return totalPromptTokens + totalCompletionTokens;
 };
 
 export default countTokens;

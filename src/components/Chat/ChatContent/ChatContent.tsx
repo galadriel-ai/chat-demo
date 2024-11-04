@@ -70,8 +70,13 @@ const ChatContent = () => {
                     role={message.role}
                     content={message.content}
                     messageIndex={index}
+                    ttftMs={message.ttftMs}
+                    promptTokens={message.promptTokens}
+                    completionTokens={message.completionTokens}
+                    tokensPerSec={message.tokensPerSec}
+                    price={message.price}
                   />
-                  {!generating && advancedMode && <NewMessageButton messageIndex={index} />}
+                  {/*{!generating && advancedMode && <NewMessageButton messageIndex={index} />}*/}
                 </React.Fragment>
               )
             ))}
