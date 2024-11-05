@@ -3,7 +3,7 @@ import React, { ChangeEvent, useState } from 'react';
 import { PromptFile } from '@type/chat';
 import { Dropzone, ExtFile, FileMosaic } from '@files-ui/react';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 const SUPPORTED_FILE_TYPES = [
   'text/plain', 'application/json', 'application/pdf',
