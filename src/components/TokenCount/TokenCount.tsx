@@ -17,7 +17,7 @@ const TokenCount = React.memo(() => {
   let model = useStore((state) =>
     state.chats
       ? state.chats[state.currentChatIndex].config.model
-      : 'llama3.1:8b'
+      : 'llama3.1:70b'
   );
 
   const cost = useMemo(() => {

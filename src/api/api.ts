@@ -43,11 +43,18 @@ export const getChatCompletionStream = async (
   };
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
+  const formattedMessages = messages.map(m => {
+    return {
+      role: m.role,
+      content: m.content,
+    }
+  })
+
   const response = await fetch(endpoint, {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      messages,
+      messages: formattedMessages,
       ...config,
       max_tokens: undefined,
       stream: true,
