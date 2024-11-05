@@ -70,6 +70,7 @@ const ChatContent = () => {
                     role={message.role}
                     content={message.content}
                     messageIndex={index}
+                    displayContent={message.displayContent}
                     ttftMs={message.ttftMs}
                     promptTokens={message.promptTokens}
                     completionTokens={message.completionTokens}

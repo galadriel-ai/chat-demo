@@ -4,18 +4,20 @@ import useStore from '@store/store';
 
 import useSubmit from '@hooks/useSubmit';
 
-import { ChatInterface } from '@type/chat';
+import { ChatInterface, PromptFile } from '@type/chat';
 
 import PopupModal from '@components/PopupModal';
-import TokenCount from '@components/TokenCount';
 import CommandPrompt from '../CommandPrompt';
+import FileUploader from '@components/Chat/ChatContent/Message/View/FileUploader';
+import { ExtFile } from '@files-ui/react';
+import ArrowBottom from '@icon/ArrowBottom';
 
 const EditView = ({
-  content,
-  setIsEdit,
-  messageIndex,
-  sticky,
-}: {
+                    content,
+                    setIsEdit,
+                    messageIndex,
+                    sticky,
+                  }: {
   content: string;
   setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
   messageIndex: number;
@@ -26,6 +28,12 @@ const EditView = ({
   const currentChatIndex = useStore((state) => state.currentChatIndex);
 
   const [_content, _setContent] = useState<string>(content);
+
+  const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
+  const [promptFiles, setPromptFiles] = useState<PromptFile[]>([]);
+  const [uploaderFiles, setUploaderFiles] = useState<ExtFile[]>([]);
+
+
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const textareaRef = React.createRef<HTMLTextAreaElement>();
 
@@ -38,7 +46,7 @@ const EditView = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isMobile =
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|playbook|silk/i.test(
-        navigator.userAgent
+        navigator.userAgent,
       );
 
     if (e.key === 'Enter' && !isMobile && !e.nativeEvent.isComposing) {
@@ -63,10 +71,16 @@ const EditView = ({
     }
   };
 
+  const handleFileUpload = (file: PromptFile, extFile: ExtFile) => {
+    setUploaderFiles([...uploaderFiles, extFile]);
+    setPromptFiles([...promptFiles, file]);
+    _setContent(`${_content} {${file.name}}`);
+  };
+
   const handleSave = () => {
     if (sticky && (_content === '' || useStore.getState().generating)) return;
     const updatedChats: ChatInterface[] = JSON.parse(
-      JSON.stringify(useStore.getState().chats)
+      JSON.stringify(useStore.getState().chats),
     );
     const updatedMessages = updatedChats[currentChatIndex].messages;
     if (sticky) {
@@ -84,20 +98,31 @@ const EditView = ({
   const handleGenerate = () => {
     if (useStore.getState().generating) return;
     const updatedChats: ChatInterface[] = JSON.parse(
-      JSON.stringify(useStore.getState().chats)
+      JSON.stringify(useStore.getState().chats),
     );
     const updatedMessages = updatedChats[currentChatIndex].messages;
+
+    const displayContent = _content;
+    let fullContent = _content;
+    promptFiles.forEach((file: PromptFile) => {
+      fullContent = fullContent.replaceAll(`{${file.name}}`, file.content);
+    });
+
     if (sticky) {
       if (_content !== '') {
-        updatedMessages.push({ role: inputRole, content: _content });
+        updatedMessages.push({ role: inputRole, content: fullContent, displayContent });
       }
       _setContent('');
+      setUploaderFiles([]);
+      setIsUploadOpen(false);
+      setPromptFiles([]);
       resetTextAreaHeight();
     } else {
-      updatedMessages[messageIndex].content = _content;
+      updatedMessages[messageIndex].displayContent = displayContent;
+      updatedMessages[messageIndex].content = fullContent;
       updatedChats[currentChatIndex].messages = updatedMessages.slice(
         0,
-        messageIndex + 1
+        messageIndex + 1,
       );
       setIsEdit(false);
     }
@@ -140,6 +165,12 @@ const EditView = ({
           rows={1}
         ></textarea>
       </div>
+      <FileUploader
+        files={uploaderFiles}
+        isOpen={isUploadOpen}
+        onTextUploaded={handleFileUpload}
+        onRemoveFiles={() => setUploaderFiles([])}
+      />
       <EditViewButtons
         sticky={sticky}
         handleGenerate={handleGenerate}
@@ -147,6 +178,8 @@ const EditView = ({
         setIsModalOpen={setIsModalOpen}
         setIsEdit={setIsEdit}
         _setContent={_setContent}
+        isUploadOpen={isUploadOpen}
+        onToggleUpload={() => setIsUploadOpen(!isUploadOpen)}
       />
       {isModalOpen && (
         <PopupModal
@@ -162,19 +195,23 @@ const EditView = ({
 
 const EditViewButtons = memo(
   ({
-    sticky = false,
-    handleGenerate,
-    handleSave,
-    setIsModalOpen,
-    setIsEdit,
-    _setContent,
-  }: {
+     sticky = false,
+     handleGenerate,
+     handleSave,
+     setIsModalOpen,
+     setIsEdit,
+     _setContent,
+     isUploadOpen,
+     onToggleUpload,
+   }: {
     sticky?: boolean;
     handleGenerate: () => void;
     handleSave: () => void;
     setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
     _setContent: React.Dispatch<React.SetStateAction<string>>;
+    isUploadOpen: boolean,
+    onToggleUpload: () => void;
   }) => {
     const { t } = useTranslation();
     const generating = useStore.getState().generating;
@@ -182,7 +219,27 @@ const EditViewButtons = memo(
 
     return (
       <div className='flex'>
+        <div className={'justify-center'}>
+          <button
+            className={`btn relative mr-2 flex flex-row gap-2 fill-white ${
+              sticky
+                ? `btn-neutral ${
+                  generating ? 'cursor-not-allowed opacity-40' : ''
+                }`
+                : 'btn-neutral'
+            }`}
+            onClick={onToggleUpload}
+          >
+            <ArrowBottom
+              className={`h-3 w-3 transition-all duration-100 text-white ${
+                !isUploadOpen ? 'rotate-180' : ''
+              }`}
+            />
+            Upload file
+          </button>
+        </div>
         <div className='flex-1 text-center mt-2 flex justify-center'>
+
           {sticky && (
             <button
               className={`btn relative mr-2 btn-primary ${
@@ -214,8 +271,8 @@ const EditViewButtons = memo(
             className={`btn relative mr-2 ${
               sticky
                 ? `btn-neutral ${
-                    generating ? 'cursor-not-allowed opacity-40' : ''
-                  }`
+                  generating ? 'cursor-not-allowed opacity-40' : ''
+                }`
                 : 'btn-neutral'
             }`}
             onClick={handleSave}
@@ -242,7 +299,7 @@ const EditViewButtons = memo(
         <CommandPrompt _setContent={_setContent} />
       </div>
     );
-  }
+  },
 );
 
 export default EditView;

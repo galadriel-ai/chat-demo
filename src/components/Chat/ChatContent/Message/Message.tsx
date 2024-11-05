@@ -19,6 +19,7 @@ const Message = React.memo(
      role,
      content,
      messageIndex,
+     displayContent,
      ttftMs,
      promptTokens,
      completionTokens,
@@ -29,6 +30,7 @@ const Message = React.memo(
     role: Role;
     content: string;
     messageIndex: number;
+    displayContent?: string;
     ttftMs?: number;
     promptTokens?: number;
     completionTokens?: number;
@@ -88,7 +90,7 @@ const Message = React.memo(
             </div>
             <MessageContent
               role={role}
-              content={content}
+              content={displayContent || content}
               messageIndex={messageIndex}
               sticky={sticky}
             />
