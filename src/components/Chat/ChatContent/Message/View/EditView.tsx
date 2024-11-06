@@ -11,6 +11,7 @@ import CommandPrompt from '../CommandPrompt';
 import FileUploader from '@components/Chat/ChatContent/Message/View/FileUploader';
 import { ExtFile } from '@files-ui/react';
 import ArrowBottom from '@icon/ArrowBottom';
+import countTokens from '@utils/messageUtils';
 
 const EditView = ({
                     content,
@@ -72,6 +73,18 @@ const EditView = ({
   };
 
   const handleFileUpload = (file: PromptFile, extFile: ExtFile) => {
+    const chats = useStore.getState().chats;
+    if (chats) {
+      const tokenCount = countTokens([{ role: 'user', content: file.content }], chats[currentChatIndex].config.model);
+      if (tokenCount > chats[currentChatIndex].config.max_tokens) {
+        useStore.getState()
+          .setToastMessage(
+            `File is ${tokenCount} tokens long, Max token for the chat is configured at ${chats[currentChatIndex].config.max_tokens}`
+          );
+        useStore.getState().setToastShow(true);
+        useStore.getState().setToastStatus('error');
+      }
+    }
     setUploaderFiles([...uploaderFiles, extFile]);
     setPromptFiles([...promptFiles, file]);
     _setContent(`${_content} {${file.name}}`);

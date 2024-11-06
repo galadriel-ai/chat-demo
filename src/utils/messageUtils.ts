@@ -1,47 +1,33 @@
 import { MessageInterface, ModelOptions, TotalTokenUsed } from '@type/chat';
 
 import useStore from '@store/store';
+import llama3Tokenizer from 'llama3-tokenizer-js';
 
-import { Tiktoken } from '@dqbd/tiktoken/lite';
 
-const cl100k_base = await import('@dqbd/tiktoken/encoders/cl100k_base.json');
-
-const encoder = new Tiktoken(
-  cl100k_base.bpe_ranks,
-  {
-    ...cl100k_base.special_tokens,
-    '<|im_start|>': 100264,
-    '<|im_end|>': 100265,
-    '<|im_sep|>': 100266,
-  },
-  cl100k_base.pat_str,
-);
-
-// https://github.com/dqbd/tiktoken/issues/23#issuecomment-1483317174
 export const getChatGPTEncoding = (
   messages: MessageInterface[],
   model: ModelOptions,
 ) => {
-  const isGpt3 = false;
+  const msgSep = '<|eot_id|>';
+  const roleStart = "<|start_header_id|>";
+  const roleEnd = "<|end_header_id|>\n\n";
 
-  const msgSep = isGpt3 ? '\n' : '';
-  const roleSep = isGpt3 ? '\n' : '<|im_sep|>';
-
-  const serialized = [
+  const serialized = "<|begin_of_text|>" + [
     messages
       .map(({ role, content }) => {
-        return `<|im_start|>${role}${roleSep}${content}<|im_end|>`;
+        return `${roleStart}${role}${roleEnd}${content}`;
       })
       .join(msgSep),
-    `<|im_start|>assistant${roleSep}`,
+    `assistant${roleEnd}`,
   ].join(msgSep);
 
-  return encoder.encode(serialized, 'all');
+  return llama3Tokenizer.encode(serialized, {bos: true, eos: true})
 };
 
 const countTokens = (messages: MessageInterface[], model: ModelOptions) => {
   if (messages.length === 0) return 0;
-  return getChatGPTEncoding(messages, model).length;
+  // TODO: this is roughly correct most of the time :)
+  return getChatGPTEncoding(messages, model).length + 19;
 };
 
 export const limitMessageTokens = (
