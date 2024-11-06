@@ -1,4 +1,3 @@
-import React from 'react';
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
 import { ChatInterface, MessageInterface } from '@type/chat';
@@ -124,7 +123,6 @@ const useSubmit = () => {
             reading = false;
           } else {
             const resultString = result.reduce((output: string, curr) => {
-              // TODO: latency, ttft, tokens per req, cost per message
               if (typeof curr === 'string') {
                 partial += curr;
               } else {
