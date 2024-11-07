@@ -1,7 +1,7 @@
 import useStore from '@store/store';
 import { useTranslation } from 'react-i18next';
 import { ChatInterface, MessageInterface } from '@type/chat';
-import { getChatCompletion, getChatCompletionStream } from '@api/api';
+import { callTool, getChatCompletion, getChatCompletionStream } from '@api/api';
 import { parseEventSource } from '@api/helper';
 import { limitMessageTokens, updateTotalTokenUsed } from '@utils/messageUtils';
 import { _defaultChatConfig, modelCost } from '@constants/chat';
@@ -64,6 +64,7 @@ const useSubmit = () => {
     setChats(updatedChats);
     setGenerating(true);
 
+    let isToolCallRequired = false;
     try {
       let stream;
       if (chats[currentChatIndex].messages.length === 0)
@@ -112,6 +113,7 @@ const useSubmit = () => {
         const reader = stream.getReader();
         let reading = true;
         let partial = '';
+        const toolChunks: any[] = [];
         while (reading && useStore.getState().generating) {
           const { done, value } = await reader.read();
           const result = parseEventSource(
@@ -127,6 +129,8 @@ const useSubmit = () => {
                 partial += curr;
               } else {
                 const content = curr.choices[0]?.delta?.content ?? null;
+                const newToolChunks = curr.choices[0]?.delta?.tool_calls;
+                if (newToolChunks && newToolChunks.length) toolChunks.push(...newToolChunks);
                 if (content) output += content;
                 else {
                   console.log(curr);
@@ -168,6 +172,53 @@ const useSubmit = () => {
             setChats(updatedChats);
           }
         }
+
+        // TODO: This needs some refactoring, well this whole function really..
+        // Handle tool calls
+        const formattedToolCalls = [];
+        if (toolChunks.length) {
+          const formattedToolCallsObject: any = {};
+          toolChunks.forEach(chunk => {
+            if (chunk.index !== undefined && chunk.index !== null) {
+              if (!formattedToolCallsObject[chunk.index]) {
+                // Set default value
+                formattedToolCallsObject[chunk.index] = {
+                  id: null,
+                  function: {
+                    name: null,
+                    arguments: '',
+                  },
+                  type: null,
+                };
+              }
+
+              formattedToolCallsObject[chunk.index].id = formattedToolCallsObject[chunk.index].id || chunk.id;
+              formattedToolCallsObject[chunk.index].type = formattedToolCallsObject[chunk.index].type || chunk.type;
+              if (chunk.function) {
+                formattedToolCallsObject[chunk.index].function.name = formattedToolCallsObject[chunk.index].function.name || chunk.function.name;
+                if (chunk.function.arguments) {
+                  formattedToolCallsObject[chunk.index].function.arguments += chunk.function.arguments;
+                }
+              }
+            }
+          });
+          for (let [_, value] of Object.entries(formattedToolCallsObject)) {
+            try {
+              const formattedValue: any = value;
+              formattedValue.function.arguments = JSON.parse(formattedValue.function.arguments);
+              formattedToolCalls.push(value);
+            } catch (e) {
+
+            }
+          }
+          if (formattedToolCalls.length) {
+            const updatedMessages = updatedChats[currentChatIndex].messages;
+            updatedMessages[updatedMessages.length - 1].toolCalls = formattedToolCalls;
+            setChats(updatedChats);
+            isToolCallRequired = true;
+          }
+        }
+
         if (useStore.getState().generating) {
           reader.cancel('Cancelled by user');
         } else {
@@ -229,6 +280,65 @@ const useSubmit = () => {
         //     content: title,
         //   });
         // }
+      }
+    } catch (e: unknown) {
+      const err = (e as Error).message;
+      console.log(err);
+      setError(err);
+    }
+    setGenerating(false);
+
+    if (isToolCallRequired) {
+      await handleToolCall();
+    }
+  };
+
+  const handleToolCall = async () => {
+    const chats = useStore.getState().chats;
+    if (generating || !chats) return;
+
+    const updatedChats: ChatInterface[] = JSON.parse(JSON.stringify(chats));
+
+    let name = null;
+    let functionArguments = null;
+    let functionId = null;
+    const lastMessage = updatedChats[currentChatIndex].messages.at(-1);
+    if (lastMessage && lastMessage.toolCalls && lastMessage.toolCalls.length) {
+      name = lastMessage.toolCalls[0].function.name;
+      functionArguments = lastMessage.toolCalls[0].function.arguments;
+      functionId = lastMessage.toolCalls[0].id;
+    }
+
+
+    updatedChats[currentChatIndex].messages.push({
+      role: 'tool',
+      content: '',
+    });
+
+    setChats(updatedChats);
+    setGenerating(true);
+    const updatedMessages = updatedChats[currentChatIndex].messages;
+
+    if (!name || !functionArguments || !functionId) {
+      updatedMessages[updatedMessages.length - 1].content += 'Failed to get tool result';
+      setChats(updatedChats);
+      setGenerating(false);
+      return;
+    }
+
+    try {
+      const toolResponse = await callTool(
+        apiKey || '', name, functionArguments,
+      );
+      if (toolResponse) {
+        updatedMessages[updatedMessages.length - 1].content += toolResponse;
+        setChats(updatedChats);
+        setGenerating(false);
+        handleSubmit();
+        return;
+      } else {
+        updatedMessages[updatedMessages.length - 1].content += 'Failed to get tool result';
+        setChats(updatedChats);
       }
     } catch (e: unknown) {
       const err = (e as Error).message;

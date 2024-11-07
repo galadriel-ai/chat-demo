@@ -31,7 +31,7 @@ const MessageContent = ({
       ) : (
         <ContentView
           role={role}
-          content={content}
+          content={role !== "tool" ? content : `${content.slice(0, 200)}...`}
           setIsEdit={setIsEdit}
           messageIndex={messageIndex}
         />
