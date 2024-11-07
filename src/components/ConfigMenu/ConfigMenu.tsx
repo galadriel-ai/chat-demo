@@ -35,7 +35,7 @@ const ConfigMenu = ({
       presence_penalty: _presencePenalty,
       top_p: _topP,
       frequency_penalty: _frequencyPenalty,
-      enabled_tools: [],
+      enabled_tools: config.enabled_tools,
     });
     setIsModalOpen(false);
   };
