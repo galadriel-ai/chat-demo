@@ -23,6 +23,11 @@ export const modelOptions: ModelOptions[] = [
   'llama3.1:405b',
 ];
 
+export const modelsSupportingTools: ModelOptions[] = [
+  'llama3.1:70b',
+  'llama3.1:405b',
+];
+
 export const defaultModel = 'llama3.1:70b';
 
 export const modelMaxToken = {
