@@ -19,6 +19,7 @@ const Message = React.memo(
      role,
      content,
      messageIndex,
+     toolCalls,
      displayContent,
      ttftMs,
      promptTokens,
@@ -30,6 +31,7 @@ const Message = React.memo(
     role: Role;
     content: string;
     messageIndex: number;
+    toolCalls?: any[];
     displayContent?: string;
     ttftMs?: number;
     promptTokens?: number;
@@ -88,12 +90,24 @@ const Message = React.memo(
                 </div>
               }
             </div>
-            <MessageContent
-              role={role}
-              content={displayContent || content}
-              messageIndex={messageIndex}
-              sticky={sticky}
-            />
+            {(toolCalls && toolCalls.length) ?
+              <>
+                <MessageContent
+                  role={role}
+                  content={`Calling: **${toolCalls[0].function?.name}** with arguments: **${JSON.stringify(toolCalls[0].function?.arguments)}**`}
+                  messageIndex={messageIndex}
+                  sticky={sticky}
+                />
+              </>
+              :
+              <MessageContent
+                role={role}
+                content={displayContent || content}
+                messageIndex={messageIndex}
+                sticky={sticky}
+              />
+            }
+
           </div>
         </div>
       </div>

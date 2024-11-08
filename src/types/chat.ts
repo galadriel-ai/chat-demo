@@ -1,12 +1,14 @@
 import { Prompt } from './prompt';
 import { Theme } from './theme';
+import { Tool } from '@type/tool';
 
-export type Role = 'user' | 'assistant' | 'system';
+export type Role = 'user' | 'assistant' | 'system' | 'tool';
 export const roles: Role[] = ['user', 'assistant', 'system'];
 
 export interface MessageInterface {
   role: Role;
   content: string;
+  toolCalls?: any[];
   displayContent?: string;
   promptTokens?: number;
   completionTokens?: number;
@@ -17,8 +19,8 @@ export interface MessageInterface {
 }
 
 export interface PromptFile {
-  name: string
-  content: string
+  name: string;
+  content: string;
 }
 
 export interface ChatInterface {
@@ -37,6 +39,7 @@ export interface ConfigInterface {
   presence_penalty: number;
   top_p: number;
   frequency_penalty: number;
+  enabled_tools: Tool[];
 }
 
 export interface ChatHistoryInterface {
@@ -73,6 +76,7 @@ export type TotalTokenUsed = {
     completionTokens: number;
   };
 };
+
 export interface LocalStorageInterfaceV0ToV1 {
   chats: ChatInterface[];
   currentChatIndex: number;
@@ -102,6 +106,7 @@ export interface LocalStorageInterfaceV2ToV3 {
   theme: Theme;
   autoTitle: boolean;
 }
+
 export interface LocalStorageInterfaceV3ToV4 {
   chats: ChatInterface[];
   currentChatIndex: number;

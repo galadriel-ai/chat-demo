@@ -13,6 +13,7 @@ export interface EventSourceDataChoices {
   delta: {
     content?: string;
     role?: string;
+    tool_calls?: any;
   };
   finish_reason?: string;
   index: number;

@@ -12,6 +12,7 @@ import FileUploader from '@components/Chat/ChatContent/Message/View/FileUploader
 import { ExtFile } from '@files-ui/react';
 import ArrowBottom from '@icon/ArrowBottom';
 import countTokens from '@utils/messageUtils';
+import Tools from '@components/Chat/ChatContent/Message/Tools';
 
 const EditView = ({
                     content,
@@ -79,7 +80,7 @@ const EditView = ({
       if (tokenCount > chats[currentChatIndex].config.max_tokens) {
         useStore.getState()
           .setToastMessage(
-            `File is ${tokenCount} tokens long, Max token for the chat is configured at ${chats[currentChatIndex].config.max_tokens}`
+            `File is ${tokenCount} tokens long, Max token for the chat is configured at ${chats[currentChatIndex].config.max_tokens}`,
           );
         useStore.getState().setToastShow(true);
         useStore.getState().setToastStatus('error');
@@ -309,7 +310,10 @@ const EditViewButtons = memo(
           )}
         </div>
         {/*{sticky && advancedMode && <TokenCount />}*/}
-        <CommandPrompt _setContent={_setContent} />
+        <div className={"flex flex-row gap-2 items-center"}>
+          <Tools/>
+          <CommandPrompt _setContent={_setContent} />
+        </div>
       </div>
     );
   },

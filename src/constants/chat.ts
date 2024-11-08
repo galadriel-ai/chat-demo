@@ -55,6 +55,7 @@ export const _defaultChatConfig: ConfigInterface = {
   presence_penalty: 0,
   top_p: 1,
   frequency_penalty: 0,
+  enabled_tools: [],
 };
 
 export const generateDefaultChat = (
