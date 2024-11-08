@@ -136,9 +136,9 @@ const useSubmit = () => {
                   promptTokens = curr.usage?.prompt_tokens ?? null;
                   completionTokens = curr.usage?.completion_tokens ?? null;
                 }
-              }
-              if (ttftMs === null) {
-                ttftMs = (new Date()).getTime() - startTime.getTime();
+                if (ttftMs === null && (content || (newToolChunks && newToolChunks.length))) {
+                  ttftMs = (new Date()).getTime() - startTime.getTime();
+                }
               }
               return output;
             }, '');
