@@ -13,6 +13,7 @@ import { ExtFile } from '@files-ui/react';
 import ArrowBottom from '@icon/ArrowBottom';
 import countTokens from '@utils/messageUtils';
 import Tools from '@components/Chat/ChatContent/Message/Tools';
+import { modelsSupportingTools } from '@constants/chat';
 
 const EditView = ({
                     content,
@@ -27,6 +28,7 @@ const EditView = ({
 }) => {
   const inputRole = useStore((state) => state.inputRole);
   const setChats = useStore((state) => state.setChats);
+  const chats = useStore((state) => state.chats);
   const currentChatIndex = useStore((state) => state.currentChatIndex);
 
   const [_content, _setContent] = useState<string>(content);
@@ -38,6 +40,20 @@ const EditView = ({
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const textareaRef = React.createRef<HTMLTextAreaElement>();
+
+  const [isToolsSupported, setIsToolsSupported] = useState<boolean>(false);
+
+  useEffect(() => {
+    const chats = useStore.getState().chats;
+    if (chats) {
+      const model = chats[currentChatIndex].config.model;
+      if (modelsSupportingTools.includes(model)) {
+        setIsToolsSupported(true);
+      } else {
+        setIsToolsSupported(false);
+      }
+    }
+  }, [chats]);
 
   const { t } = useTranslation();
 
@@ -194,6 +210,7 @@ const EditView = ({
         _setContent={_setContent}
         isUploadOpen={isUploadOpen}
         onToggleUpload={() => setIsUploadOpen(!isUploadOpen)}
+        isToolsSupported={isToolsSupported}
       />
       {isModalOpen && (
         <PopupModal
@@ -217,6 +234,7 @@ const EditViewButtons = memo(
      _setContent,
      isUploadOpen,
      onToggleUpload,
+     isToolsSupported,
    }: {
     sticky?: boolean;
     handleGenerate: () => void;
@@ -225,7 +243,8 @@ const EditViewButtons = memo(
     setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
     _setContent: React.Dispatch<React.SetStateAction<string>>;
     isUploadOpen: boolean,
-    onToggleUpload: () => void;
+    onToggleUpload: () => void,
+    isToolsSupported: boolean;
   }) => {
     const { t } = useTranslation();
     const generating = useStore.getState().generating;
@@ -310,8 +329,8 @@ const EditViewButtons = memo(
           )}
         </div>
         {/*{sticky && advancedMode && <TokenCount />}*/}
-        <div className={"flex flex-row gap-2 items-center"}>
-          <Tools/>
+        <div className={'flex flex-row gap-2 items-center'}>
+          {isToolsSupported && <Tools />}
           <CommandPrompt _setContent={_setContent} />
         </div>
       </div>

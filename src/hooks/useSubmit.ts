@@ -133,7 +133,6 @@ const useSubmit = () => {
                 if (newToolChunks && newToolChunks.length) toolChunks.push(...newToolChunks);
                 if (content) output += content;
                 else {
-                  console.log(curr);
                   promptTokens = curr.usage?.prompt_tokens ?? null;
                   completionTokens = curr.usage?.completion_tokens ?? null;
                 }
@@ -173,50 +172,18 @@ const useSubmit = () => {
           }
         }
 
-        // TODO: This needs some refactoring, well this whole function really..
+
         // Handle tool calls
-        const formattedToolCalls = [];
-        if (toolChunks.length) {
-          const formattedToolCallsObject: any = {};
-          toolChunks.forEach(chunk => {
-            if (chunk.index !== undefined && chunk.index !== null) {
-              if (!formattedToolCallsObject[chunk.index]) {
-                // Set default value
-                formattedToolCallsObject[chunk.index] = {
-                  id: null,
-                  function: {
-                    name: null,
-                    arguments: '',
-                  },
-                  type: null,
-                };
-              }
-
-              formattedToolCallsObject[chunk.index].id = formattedToolCallsObject[chunk.index].id || chunk.id;
-              formattedToolCallsObject[chunk.index].type = formattedToolCallsObject[chunk.index].type || chunk.type;
-              if (chunk.function) {
-                formattedToolCallsObject[chunk.index].function.name = formattedToolCallsObject[chunk.index].function.name || chunk.function.name;
-                if (chunk.function.arguments) {
-                  formattedToolCallsObject[chunk.index].function.arguments += chunk.function.arguments;
-                }
-              }
-            }
-          });
-          for (let [_, value] of Object.entries(formattedToolCallsObject)) {
-            try {
-              const formattedValue: any = value;
-              formattedValue.function.arguments = JSON.parse(formattedValue.function.arguments);
-              formattedToolCalls.push(value);
-            } catch (e) {
-
-            }
-          }
-          if (formattedToolCalls.length) {
-            const updatedMessages = updatedChats[currentChatIndex].messages;
-            updatedMessages[updatedMessages.length - 1].toolCalls = formattedToolCalls;
-            setChats(updatedChats);
-            isToolCallRequired = true;
-          }
+        const formattedToolCalls = formatToolCallChunks(toolChunks);
+        if (formattedToolCalls.length) {
+          // Ugly mess, should use the original one, but somehow doesn't work
+          const updatedChats: ChatInterface[] = JSON.parse(
+            JSON.stringify(useStore.getState().chats),
+          );
+          const updatedMessages = updatedChats[currentChatIndex].messages;
+          updatedMessages[updatedMessages.length - 1].toolCalls = formattedToolCalls;
+          setChats(updatedChats);
+          isToolCallRequired = true;
         }
 
         if (useStore.getState().generating) {
@@ -346,6 +313,48 @@ const useSubmit = () => {
       setError(err);
     }
     setGenerating(false);
+  };
+
+  const formatToolCallChunks = (toolChunks: any[]): any[] => {
+    if (!toolChunks || !toolChunks.length) {
+      return [];
+    }
+    const formattedToolCalls = [];
+    const formattedToolCallsObject: any = {};
+    toolChunks.forEach(chunk => {
+      if (chunk.index !== undefined && chunk.index !== null) {
+        if (!formattedToolCallsObject[chunk.index]) {
+          // Set default value
+          formattedToolCallsObject[chunk.index] = {
+            id: null,
+            function: {
+              name: null,
+              arguments: '',
+            },
+            type: null,
+          };
+        }
+
+        formattedToolCallsObject[chunk.index].id = formattedToolCallsObject[chunk.index].id || chunk.id;
+        formattedToolCallsObject[chunk.index].type = formattedToolCallsObject[chunk.index].type || chunk.type;
+        if (chunk.function) {
+          formattedToolCallsObject[chunk.index].function.name = formattedToolCallsObject[chunk.index].function.name || chunk.function.name;
+          if (chunk.function.arguments) {
+            formattedToolCallsObject[chunk.index].function.arguments += chunk.function.arguments;
+          }
+        }
+      }
+    });
+    for (let [_, value] of Object.entries(formattedToolCallsObject)) {
+      try {
+        const formattedValue: any = value;
+        formattedValue.function.arguments = JSON.parse(formattedValue.function.arguments);
+        formattedToolCalls.push(value);
+      } catch (e) {
+
+      }
+    }
+    return formattedToolCalls;
   };
 
   return { handleSubmit, error };

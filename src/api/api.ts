@@ -1,6 +1,7 @@
 import { ShareGPTSubmitBodyInterface } from '@type/api';
 import { ConfigInterface, MessageInterface, ModelOptions } from '@type/chat';
 import { toolsToApiFormat } from '@type/tool';
+import { modelsSupportingTools } from '@constants/chat';
 
 export const getChatCompletion = async (
   endpoint: string,
@@ -60,8 +61,11 @@ export const getChatCompletionStream = async (
   };
 
   let tools = toolsToApiFormat(config.enabled_tools);
-  const lastMessage = formattedMessages.at(-1)
+  const lastMessage = formattedMessages.at(-1);
   if (lastMessage && lastMessage.role === 'tool') {
+    tools = undefined;
+  }
+  if (!modelsSupportingTools.includes(config.model)) {
     tools = undefined;
   }
 
