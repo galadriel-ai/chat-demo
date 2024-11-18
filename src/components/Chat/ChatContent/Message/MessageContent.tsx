@@ -3,17 +3,24 @@ import useStore from '@store/store';
 
 import ContentView from './View/ContentView';
 import EditView from './View/EditView';
+import { Orama } from '@orama/orama/dist/commonjs/types';
 
 const MessageContent = ({
+  isRagEnabled,
   role,
   content,
   messageIndex,
+  ragContent,
+  vectorDb,
   sticky = false,
 }: {
-  role: string;
-  content: string;
-  messageIndex: number;
-  sticky?: boolean;
+  isRagEnabled: boolean,
+  role: string,
+  content: string,
+  messageIndex: number,
+  ragContent?: string,
+  vectorDb?: Orama<any>,
+  sticky?: boolean,
 }) => {
   const [isEdit, setIsEdit] = useState<boolean>(sticky);
   const advancedMode = useStore((state) => state.advancedMode);
@@ -23,15 +30,18 @@ const MessageContent = ({
       {advancedMode && <div className='flex flex-grow flex-col gap-3'></div>}
       {isEdit ? (
         <EditView
+          isRagEnabled={isRagEnabled}
           content={content}
           setIsEdit={setIsEdit}
           messageIndex={messageIndex}
           sticky={sticky}
+          vectorDb={vectorDb}
         />
       ) : (
         <ContentView
           role={role}
           content={role !== "tool" ? content : `${content.slice(0, 200)}...`}
+          ragContent={ragContent}
           setIsEdit={setIsEdit}
           messageIndex={messageIndex}
         />

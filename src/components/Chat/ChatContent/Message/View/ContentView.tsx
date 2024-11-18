@@ -35,15 +35,17 @@ import CodeBlock from '../CodeBlock';
 
 const ContentView = memo(
   ({
-    role,
-    content,
-    setIsEdit,
-    messageIndex,
-  }: {
-    role: string;
-    content: string;
-    setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
-    messageIndex: number;
+     role,
+     content,
+     setIsEdit,
+     messageIndex,
+     ragContent,
+   }: {
+    role: string,
+    content: string,
+    setIsEdit: React.Dispatch<React.SetStateAction<boolean>>,
+    messageIndex: number,
+    ragContent?: string,
   }) => {
     const { handleSubmit } = useSubmit();
 
@@ -52,14 +54,14 @@ const ContentView = memo(
     const currentChatIndex = useStore((state) => state.currentChatIndex);
     const setChats = useStore((state) => state.setChats);
     const lastMessageIndex = useStore((state) =>
-      state.chats ? state.chats[state.currentChatIndex].messages.length - 1 : 0
+      state.chats ? state.chats[state.currentChatIndex].messages.length - 1 : 0,
     );
     const inlineLatex = useStore((state) => state.inlineLatex);
     const markdownMode = useStore((state) => state.markdownMode);
 
     const handleDelete = () => {
       const updatedChats: ChatInterface[] = JSON.parse(
-        JSON.stringify(useStore.getState().chats)
+        JSON.stringify(useStore.getState().chats),
       );
       updatedChats[currentChatIndex].messages.splice(messageIndex, 1);
       setChats(updatedChats);
@@ -67,7 +69,7 @@ const ContentView = memo(
 
     const handleMove = (direction: 'up' | 'down') => {
       const updatedChats: ChatInterface[] = JSON.parse(
-        JSON.stringify(useStore.getState().chats)
+        JSON.stringify(useStore.getState().chats),
       );
       const updatedMessages = updatedChats[currentChatIndex].messages;
       const temp = updatedMessages[messageIndex];
@@ -91,7 +93,7 @@ const ContentView = memo(
 
     const handleRefresh = () => {
       const updatedChats: ChatInterface[] = JSON.parse(
-        JSON.stringify(useStore.getState().chats)
+        JSON.stringify(useStore.getState().chats),
       );
       const updatedMessages = updatedChats[currentChatIndex].messages;
       updatedMessages.splice(updatedMessages.length - 1, 1);
@@ -107,32 +109,44 @@ const ContentView = memo(
       <>
         <div className='markdown prose w-full md:max-w-full break-words dark:prose-invert dark share-gpt-message'>
           {markdownMode ? (
-            <ReactMarkdown
-              remarkPlugins={[
-                remarkGfm,
-                [remarkMath, { singleDollarTextMath: inlineLatex }],
-              ]}
-              rehypePlugins={[
-                rehypeKatex,
-                [
-                  rehypeHighlight,
-                  {
-                    detect: true,
-                    ignoreMissing: true,
-                    subset: codeLanguageSubset,
-                  },
-                ],
-              ]}
-              linkTarget='_new'
-              components={{
-                code,
-                p,
-              }}
-            >
-              {content}
-            </ReactMarkdown>
+            <>
+              <ReactMarkdown
+                remarkPlugins={[
+                  remarkGfm,
+                  [remarkMath, { singleDollarTextMath: inlineLatex }],
+                ]}
+                rehypePlugins={[
+                  rehypeKatex,
+                  [
+                    rehypeHighlight,
+                    {
+                      detect: true,
+                      ignoreMissing: true,
+                      subset: codeLanguageSubset,
+                    },
+                  ],
+                ]}
+                linkTarget='_new'
+                components={{
+                  code,
+                  p,
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+              {ragContent &&
+                <ReactMarkdown className='text-gray-500'>
+                  {ragContent}
+                </ReactMarkdown>
+              }
+            </>
           ) : (
-            <span className='whitespace-pre-wrap'>{content}</span>
+            <>
+              {ragContent &&
+                <div className='text-gray-500'>{ragContent}</div>
+              }
+              <span className='whitespace-pre-wrap'>{content}</span>
+            </>
           )}
         </div>
         <div className='flex justify-end gap-2 w-full mt-2'>
@@ -175,7 +189,7 @@ const ContentView = memo(
         </div>
       </>
     );
-  }
+  },
 );
 
 const code = memo((props: CodeProps) => {
@@ -199,10 +213,10 @@ const p = memo(
       >,
       'ref'
     > &
-      ReactMarkdownProps
+      ReactMarkdownProps,
   ) => {
     return <p className='whitespace-pre-wrap'>{props?.children}</p>;
-  }
+  },
 );
 
 export default ContentView;
