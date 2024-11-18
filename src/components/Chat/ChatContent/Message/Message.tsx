@@ -5,7 +5,7 @@ import Avatar from './Avatar';
 import MessageContent from './MessageContent';
 
 import { Role } from '@type/chat';
-import RoleSelector from './RoleSelector';
+import { Orama } from '@orama/orama/dist/commonjs/types';
 
 // const backgroundStyle: { [role in Role]: string } = {
 //   user: 'dark:bg-gray-800',
@@ -16,29 +16,35 @@ const backgroundStyle = ['dark:bg-gray-800', 'bg-gray-50 dark:bg-gray-650'];
 
 const Message = React.memo(
   ({
+     isRagEnabled,
      role,
      content,
      messageIndex,
      toolCalls,
      displayContent,
+     ragContent,
      ttftMs,
      promptTokens,
      completionTokens,
      tokensPerSec,
      price,
+     vectorDb,
      sticky = false,
    }: {
-    role: Role;
-    content: string;
-    messageIndex: number;
-    toolCalls?: any[];
-    displayContent?: string;
-    ttftMs?: number;
-    promptTokens?: number;
-    completionTokens?: number;
-    tokensPerSec?: number;
-    price?: number;
-    sticky?: boolean;
+    isRagEnabled: boolean,
+    role: Role,
+    content: string,
+    messageIndex: number,
+    toolCalls?: any[],
+    displayContent?: string,
+    ragContent?: string,
+    ttftMs?: number,
+    promptTokens?: number,
+    completionTokens?: number,
+    tokensPerSec?: number,
+    price?: number,
+    vectorDb?: Orama<any>,
+    sticky?: boolean,
   }) => {
     const hideSideMenu = useStore((state) => state.hideSideMenu);
     // const advancedMode = useStore((state) => state.advancedMode);
@@ -93,6 +99,7 @@ const Message = React.memo(
             {(toolCalls && toolCalls.length) ?
               <>
                 <MessageContent
+                  isRagEnabled={isRagEnabled}
                   role={role}
                   content={`Calling: **${toolCalls[0].function?.name}** with arguments: **${JSON.stringify(toolCalls[0].function?.arguments)}**`}
                   messageIndex={messageIndex}
@@ -101,10 +108,13 @@ const Message = React.memo(
               </>
               :
               <MessageContent
+                isRagEnabled={isRagEnabled}
                 role={role}
                 content={displayContent || content}
+                ragContent={ragContent}
                 messageIndex={messageIndex}
                 sticky={sticky}
+                vectorDb={vectorDb}
               />
             }
 

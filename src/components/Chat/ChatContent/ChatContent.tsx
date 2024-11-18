@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ScrollToBottom from 'react-scroll-to-bottom';
 import useStore from '@store/store';
 
@@ -12,6 +12,9 @@ import useSubmit from '@hooks/useSubmit';
 import DownloadChat from './DownloadChat';
 import CloneChat from './CloneChat';
 import ShareGPT from '@components/ShareGPT';
+import RagTitle from '@components/Chat/RagTitle';
+import { initVectorDB } from '@utils/vectorStore';
+import { Orama } from '@orama/orama/dist/commonjs/types';
 
 const ChatContent = () => {
   const inputRole = useStore((state) => state.inputRole);
@@ -22,7 +25,7 @@ const ChatContent = () => {
     state.currentChatIndex >= 0 &&
     state.currentChatIndex < state.chats.length
       ? state.chats[state.currentChatIndex].messages
-      : []
+      : [],
   );
   const stickyIndex = useStore((state) =>
     state.chats &&
@@ -30,7 +33,7 @@ const ChatContent = () => {
     state.currentChatIndex >= 0 &&
     state.currentChatIndex < state.chats.length
       ? state.chats[state.currentChatIndex].messages.length
-      : 0
+      : 0,
   );
   const advancedMode = useStore((state) => state.advancedMode);
   const generating = useStore.getState().generating;
@@ -38,12 +41,26 @@ const ChatContent = () => {
 
   const saveRef = useRef<HTMLDivElement>(null);
 
+  const [vectorDb, setVectorDb] = useState<Orama<any> | undefined>();
+  const [isRagEnabled, setIsRagEnabled] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!vectorDb) {
+      setVectorDb(initVectorDB());
+    }
+  }, [vectorDb]);
+
   // clear error at the start of generating new messages
   useEffect(() => {
     if (generating) {
       setError('');
     }
   }, [generating]);
+
+  const onResetVectorDb = () => {
+    setVectorDb(initVectorDB());
+    setIsRagEnabled(false);
+  };
 
   const { error } = useSubmit();
 
@@ -60,6 +77,16 @@ const ChatContent = () => {
             ref={saveRef}
           >
             {advancedMode && <ChatTitle />}
+            {(advancedMode && vectorDb) &&
+              <RagTitle
+                vectorDb={vectorDb}
+                onRemoveAll={onResetVectorDb}
+                isRagEnabled={isRagEnabled}
+                onSetRagEnabled={(isEnabled: boolean) => {
+                  setIsRagEnabled(isEnabled);
+                }}
+              />
+            }
             {!generating && advancedMode && messages?.length === 0 && (
               <NewMessageButton messageIndex={-1} />
             )}
@@ -67,16 +94,19 @@ const ChatContent = () => {
               (advancedMode || index !== 0 || message.role !== 'system') && (
                 <React.Fragment key={index}>
                   <Message
+                    isRagEnabled={isRagEnabled}
                     role={message.role}
                     content={message.content}
                     messageIndex={index}
                     toolCalls={message.toolCalls}
                     displayContent={message.displayContent}
+                    ragContent={message.ragContent}
                     ttftMs={message.ttftMs}
                     promptTokens={message.promptTokens}
                     completionTokens={message.completionTokens}
                     tokensPerSec={message.tokensPerSec}
                     price={message.price}
+                    vectorDb={vectorDb}
                   />
                   {/*{!generating && advancedMode && <NewMessageButton messageIndex={index} />}*/}
                 </React.Fragment>
@@ -85,13 +115,16 @@ const ChatContent = () => {
           </div>
 
           <Message
+            isRagEnabled={isRagEnabled}
             role={inputRole}
             content=''
             messageIndex={stickyIndex}
+            vectorDb={vectorDb}
             sticky
           />
           {error !== '' && (
-            <div className='relative py-2 px-3 w-3/5 mt-3 max-md:w-11/12 border rounded-md border-red-500 bg-red-500/10'>
+            <div
+              className='relative py-2 px-3 w-3/5 mt-3 max-md:w-11/12 border rounded-md border-red-500 bg-red-500/10'>
               <div className='text-gray-600 dark:text-gray-100 text-sm whitespace-pre-wrap'>
                 {error}
               </div>

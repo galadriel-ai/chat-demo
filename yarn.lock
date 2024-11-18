@@ -248,6 +248,11 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@orama/orama@^3.0.1":
+  version "3.0.1"
+  resolved "https://registry.npmjs.org/@orama/orama/-/orama-3.0.1.tgz"
+  integrity sha512-18hl0MiCLmumODHjrLzSdTb1Ny3Dh8tn44jwgx0LksCdvVAsr3jQvfr+hwrE7bVkap0wPELb/dnuJjvupKxheQ==
+
 "@react-oauth/google@^0.9.0":
   version "0.9.0"
   resolved "https://registry.npmjs.org/@react-oauth/google/-/google-0.9.0.tgz"

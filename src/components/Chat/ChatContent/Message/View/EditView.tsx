@@ -14,22 +14,31 @@ import ArrowBottom from '@icon/ArrowBottom';
 import countTokens from '@utils/messageUtils';
 import Tools from '@components/Chat/ChatContent/Message/Tools';
 import { modelsSupportingTools } from '@constants/chat';
+import { Orama } from '@orama/orama/dist/commonjs/types';
+import { getDocumentCount, searchVectors } from '@utils/vectorStore';
+import { postEmbedding } from '@api/embedding-api';
 
-const EditView = ({
-                    content,
-                    setIsEdit,
-                    messageIndex,
-                    sticky,
-                  }: {
-  content: string;
-  setIsEdit: React.Dispatch<React.SetStateAction<boolean>>;
-  messageIndex: number;
-  sticky?: boolean;
-}) => {
+const EditView = (
+  {
+    isRagEnabled,
+    content,
+    setIsEdit,
+    messageIndex,
+    sticky,
+    vectorDb,
+  }: {
+    isRagEnabled: boolean,
+    content: string,
+    setIsEdit: React.Dispatch<React.SetStateAction<boolean>>,
+    messageIndex: number,
+    sticky?: boolean,
+    vectorDb?: Orama<any>,
+  }) => {
   const inputRole = useStore((state) => state.inputRole);
   const setChats = useStore((state) => state.setChats);
   const chats = useStore((state) => state.chats);
   const currentChatIndex = useStore((state) => state.currentChatIndex);
+  const apiKey = useStore((state) => state.apiKey);
 
   const [_content, _setContent] = useState<string>(content);
 
@@ -125,22 +134,43 @@ const EditView = ({
   };
 
   const { handleSubmit } = useSubmit();
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (useStore.getState().generating) return;
     const updatedChats: ChatInterface[] = JSON.parse(
       JSON.stringify(useStore.getState().chats),
     );
     const updatedMessages = updatedChats[currentChatIndex].messages;
 
-    const displayContent = _content;
+    let displayContent = _content;
+    let ragContent = undefined;
     let fullContent = _content;
+    // ===== RAG
+    if (vectorDb && isRagEnabled) {
+      const docCount = getDocumentCount(vectorDb);
+      if (docCount) {
+        const response = await postEmbedding(apiKey || '', [_content]);
+        if (response.data && response.data.length) {
+          const searchResult = await searchVectors(vectorDb, response.data[0].embedding);
+          if (searchResult && searchResult.length) {
+            ragContent = '';
+            ragContent += 'Context:\n\n';
+            ragContent += searchResult.join('\n');
+            fullContent += '\n';
+            fullContent += 'Context:\n';
+            fullContent += searchResult.join('\n');
+          }
+        }
+      }
+    }
+    // ===== Add prompt file ? Is this needed anymore after RAG?
     promptFiles.forEach((file: PromptFile) => {
       fullContent = fullContent.replaceAll(`{${file.name}}`, file.content);
     });
 
+
     if (sticky) {
       if (_content !== '') {
-        updatedMessages.push({ role: inputRole, content: fullContent, displayContent });
+        updatedMessages.push({ role: inputRole, content: fullContent, displayContent, ragContent });
       }
       _setContent('');
       setUploaderFiles([]);
@@ -149,6 +179,7 @@ const EditView = ({
       resetTextAreaHeight();
     } else {
       updatedMessages[messageIndex].displayContent = displayContent;
+      updatedMessages[messageIndex].ragContent = ragContent;
       updatedMessages[messageIndex].content = fullContent;
       updatedChats[currentChatIndex].messages = updatedMessages.slice(
         0,

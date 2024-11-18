@@ -10,6 +10,7 @@ export interface MessageInterface {
   content: string;
   toolCalls?: any[];
   displayContent?: string;
+  ragContent?: string;
   promptTokens?: number;
   completionTokens?: number;
   ttftMs?: number;
