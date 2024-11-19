@@ -2,8 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { ChatInterface, ConfigInterface, ModelOptions } from '@type/chat';
 import useStore from '@store/store';
 
-export const defaultEmbeddingModel: string = "gte-large-en-v1.5"
-export const defaultEmbeddingChunkLength: number = 400
+export const defaultEmbeddingModel: string = 'gte-large-en-v1.5';
+export const defaultEmbeddingChunkLength: number = 400;
 
 const date = new Date();
 const dateString =
@@ -24,11 +24,13 @@ export const modelOptions: ModelOptions[] = [
   'llama3.1:8b',
   'llama3.1:70b',
   'llama3.1:405b',
+  'hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4',
 ];
 
 export const modelsSupportingTools: ModelOptions[] = [
   'llama3.1:70b',
   'llama3.1:405b',
+  'hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4',
 ];
 
 export const defaultModel = 'llama3.1:70b';
@@ -37,6 +39,7 @@ export const modelMaxToken = {
   'llama3.1:8b': 8192,
   'llama3.1:70b': 128000,
   'llama3.1:405b': 128000,
+  'hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4': 128000,
 };
 
 export const modelCost = {
@@ -49,6 +52,10 @@ export const modelCost = {
     completion: { price: 0.00079, unit: 1000 },
   },
   'llama3.1:405b': {
+    prompt: { price: 0.0035, unit: 1000 },
+    completion: { price: 0.0035, unit: 1000 },
+  },
+  'hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4': {
     prompt: { price: 0.0035, unit: 1000 },
     completion: { price: 0.0035, unit: 1000 },
   },
@@ -68,7 +75,7 @@ export const _defaultChatConfig: ConfigInterface = {
 
 export const generateDefaultChat = (
   title?: string,
-  folder?: string
+  folder?: string,
 ): ChatInterface => ({
   id: uuidv4(),
   title: title ? title : 'New Chat',

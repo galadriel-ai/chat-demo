@@ -69,6 +69,7 @@ export type ModelOptions =
   | 'llama3.1:8b'
   | 'llama3.1:70b'
   | 'llama3.1:405b'
+  | 'hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4'
 
 
 export type TotalTokenUsed = {
