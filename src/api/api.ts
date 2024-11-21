@@ -61,10 +61,10 @@ export const getChatCompletionStream = async (
   };
 
   let tools = toolsToApiFormat(config.enabled_tools);
-  const lastMessage = formattedMessages.at(-1);
-  if (lastMessage && lastMessage.role === 'tool') {
-    tools = undefined;
-  }
+  // const lastMessage = formattedMessages.at(-1);
+  // if (lastMessage && lastMessage.role === 'tool') {
+  //   tools = undefined;
+  // }
   if (!modelsSupportingTools.includes(config.model)) {
     tools = undefined;
   }

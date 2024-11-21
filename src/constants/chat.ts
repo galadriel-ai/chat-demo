@@ -2,8 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { ChatInterface, ConfigInterface, ModelOptions } from '@type/chat';
 import useStore from '@store/store';
 
-export const defaultEmbeddingModel: string = "gte-large-en-v1.5"
-export const defaultEmbeddingChunkLength: number = 400
+export const defaultEmbeddingModel: string = 'gte-large-en-v1.5';
+export const defaultEmbeddingChunkLength: number = 400;
 
 const date = new Date();
 const dateString =
@@ -68,7 +68,7 @@ export const _defaultChatConfig: ConfigInterface = {
 
 export const generateDefaultChat = (
   title?: string,
-  folder?: string
+  folder?: string,
 ): ChatInterface => ({
   id: uuidv4(),
   title: title ? title : 'New Chat',

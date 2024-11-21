@@ -70,7 +70,6 @@ export type ModelOptions =
   | 'llama3.1:70b'
   | 'llama3.1:405b'
 
-
 export type TotalTokenUsed = {
   [model in ModelOptions]?: {
     promptTokens: number;
